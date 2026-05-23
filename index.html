@@ -652,10 +652,14 @@ function hasAnyMoves() {
 function pegsLeft() { return board.filter(Boolean).length; }
 
 // ── SCORING ────────────────────────────────────────────
+// Accuracy (0–10,000): based on pegs eliminated
+// Speed bonus (0–5,000): drops ~35pts per second, gone after ~143s
 function calcScore(pegsRemaining, secs) {
   const elim = 14 - pegsRemaining;
   if (elim === 0) return 0;
-  return Math.round((elim / 13) * 5000 * (120 / Math.max(secs, 30)));
+  const accuracy  = Math.round((elim / 13) * 10000);
+  const timeBonus = Math.max(0, 5000 - secs * 35);
+  return accuracy + timeBonus;
 }
 
 // ── TIMER ──────────────────────────────────────────────
@@ -924,7 +928,7 @@ async function submitScore() {
       method:   'POST',
       redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
-      body:     JSON.stringify({ name, score: lastScore, date, key: SECRET_KEY }),
+      body:     JSON.stringify({ name, score: lastScore, date, time: timerElapsed, pegs: lastPegsLeft, key: SECRET_KEY }),
     });
     saved = true;
   } catch (err) { /* show buttons anyway */ }

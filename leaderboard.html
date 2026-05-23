@@ -298,16 +298,24 @@ function renderScores(scores) {
     return;
   }
 
-  panel.innerHTML = scores.map((s, i) => `
+  panel.innerHTML = scores.map((s, i) => {
+    const secs    = Number(s.time) || 0;
+    const m       = Math.floor(secs / 60);
+    const sec     = String(secs % 60).padStart(2, '0');
+    const timeStr = secs ? `⏱ ${m}:${sec}` : '';
+    const pegs    = Number(s.pegs);
+    const pegsStr = !isNaN(pegs) ? `${pegs} peg${pegs !== 1 ? 's' : ''} left` : '—';
+    const meta    = [escHtml(String(s.date || '')), timeStr].filter(Boolean).join(' · ');
+    return `
     <div class="lb-row ${rankClass(i)}">
       <div class="lb-rank">${rankLabel(i)}</div>
       <div class="lb-info">
         <div class="lb-name">${escHtml(s.name)}</div>
-        <div class="lb-date">${escHtml(String(s.date || ''))}</div>
+        <div class="lb-date">${meta}</div>
       </div>
-      <div class="lb-score">${Number(s.score).toLocaleString()}</div>
-    </div>
-  `).join('');
+      <div class="lb-score">${pegsStr}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderError() {
