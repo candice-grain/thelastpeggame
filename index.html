@@ -613,7 +613,7 @@
   <div class="header">
     <div class="title">The Last Peg</div>
     <div class="subtitle">Leave just one.</div>
-    <div id="status">Tap any hole to start game</div>
+    <div id="status">Tap a cone to select it</div>
     <span class="how-to-play-link" id="htp-btn">How to play?</span>
   </div>
 
@@ -661,7 +661,7 @@
       <div class="htp-steps">
         <div class="htp-step">
           <div class="htp-num">1</div>
-          <div class="htp-text"><strong>Pick your starting hole.</strong> Tap any hole on the board — that hole stays empty. The rest fill with pegs (14 total).</div>
+          <div class="htp-text"><strong>The board is randomised.</strong> Each game starts with one random empty hole and 14 pegs — you can't choose it, that's the challenge!</div>
         </div>
         <div class="htp-step">
           <div class="htp-num">2</div>
@@ -892,15 +892,9 @@ function undo() {
 }
 
 function resetGame() {
-  board    = new Array(15).fill(false);
-  captured = 0;
-  history  = [];
-  selected = null;
-  phase    = 'setup';
-  resetTimer();
   document.getElementById('result-overlay').style.display = 'none';
-  render();
-  updateHUD();
+  const emptyIdx = Math.floor(Math.random() * 15);
+  startGame(emptyIdx);
 }
 
 // ── RENDER ─────────────────────────────────────────────
