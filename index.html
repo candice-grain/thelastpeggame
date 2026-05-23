@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>The Last Peg</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── PALETTE ────────────────────────────────── */
+    :root {
+      --bg:     #6B0A3B;   /* deep wine           */
+      --dark:   #47071F;   /* darker wine — panels */
+      --darker: #310514;   /* deepest — holes      */
+      --pink:   #F03C97;   /* hot pink             */
+      --yellow: #D4F20A;   /* neon yellow-green    */
+      --white:  #FFFFFF;
+
+      --hole:    46px;
+      --gap:     54px;
+      --vgap:    47px;
+      --board-w: 262px;
+      --board-h: 234px;
+    }
+
+    html, body { height: 100%; overflow-x: hidden; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--pink);
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 36px 20px 52px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ─────────────────────────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .title {
+      font-family: 'Barlow', system-ui, sans-serif;
+      font-weight: 900;
+      font-size: min(13.5vw, 3.4rem);
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      color: var(--pink);
+      line-height: 0.92;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .subtitle {
+      font-family: 'Barlow', system-ui, sans-serif; font-weight: 900;
+      font-size: 1rem;
+      color: var(--yellow);
+      margin-top: 8px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    /* ── GAME WRAP ──────────────────────────────── */
+    .game-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    /* ── BOARD ──────────────────────────────────── */
+    #board-wrap {
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(120,20,60,0.6) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 80%, rgba(20,0,10,0.5) 0%, transparent 55%),
+        linear-gradient(160deg, #52102e 0%, #3a0a1e 40%, #280613 100%);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px;
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        0 12px 40px rgba(0,0,0,0.6),
+        0 4px 12px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.07),
+        inset 0 -2px 8px rgba(0,0,0,0.4);
+    }
+
+    #board-container {
+      position: relative;
+      width: var(--board-w);
+      height: var(--board-h);
+      flex-shrink: 0;
+    }
+
+    /* ── HOLES ──────────────────────────────────── */
+    .hole {
+      position: absolute;
+      width: var(--hole);
+      height: var(--hole);
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #1e040e 0%, #0d0206 70%);
+      box-shadow:
+        inset 0 3px 10px rgba(0,0,0,0.9),
+        inset 0 1px 4px rgba(0,0,0,0.7),
+        inset 0 -1px 2px rgba(255,255,255,0.03),
+        0 1px 2px rgba(255,255,255,0.05);
+      border: none;
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    .hole.valid-target {
+      background: radial-gradient(circle at 40% 35%, #1e0a06 0%, #0d0206 70%);
+      box-shadow:
+        inset 0 3px 10px rgba(0,0,0,0.9),
+        inset 0 1px 4px rgba(0,0,0,0.7),
+        0 0 0 2px rgba(212,242,10,0.6),
+        0 0 12px rgba(212,242,10,0.25);
+    }
+    .hole.valid-target::after {
+      content: '';
+      display: block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: rgba(212,242,10,0.45);
+      box-shadow: 0 0 6px rgba(212,242,10,0.5);
+    }
+    .hole.setup-hi {
+      box-shadow:
+        inset 0 3px 10px rgba(0,0,0,0.9),
+        0 0 0 2px rgba(240,60,151,0.6),
+        0 0 12px rgba(240,60,151,0.2);
+    }
+
+    /* ── PEG (3D sphere) ────────────────────────── */
+    .peg-cone {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 36% 32%,
+        rgba(255,190,220,0.9) 0%,
+        #F03C97 28%,
+        #b02070 62%,
+        #6b0a3b 100%);
+      box-shadow:
+        0 4px 12px rgba(0,0,0,0.6),
+        0 2px 4px rgba(0,0,0,0.4),
+        inset 0 -3px 6px rgba(0,0,0,0.25),
+        inset 0 1px 3px rgba(255,255,255,0.15);
+      clip-path: none;
+      filter: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+    .peg-cone.selected {
+      background: radial-gradient(circle at 36% 32%,
+        rgba(240,255,160,0.95) 0%,
+        #D4F20A 28%,
+        #8fa300 62%,
+        #4a5500 100%);
+      box-shadow:
+        0 0 18px rgba(212,242,10,0.65),
+        0 4px 12px rgba(0,0,0,0.5),
+        inset 0 -3px 6px rgba(0,0,0,0.2),
+        inset 0 1px 3px rgba(255,255,255,0.2);
+      transform: scale(1.18) translateY(-4px);
+    }
+
+    @keyframes cone-pop {
+      0%   { transform: scale(0.2); opacity: 0; }
+      65%  { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .peg-cone.pop { animation: cone-pop 0.2s cubic-bezier(0.22,1,0.36,1); }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%     { transform: translateX(-5px); }
+      40%     { transform: translateX(5px); }
+      60%     { transform: translateX(-3px); }
+      80%     { transform: translateX(3px); }
+    }
+    .hole.shake { animation: shake 0.32s ease; }
+
+    /* ── PEGS CLEARED ───────────────────────────── */
+    .section-label {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--yellow);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .count-pill {
+      background: var(--yellow);
+      color: var(--bg);
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.62rem;
+      padding: 2px 9px;
+      border-radius: 50px;
+      line-height: 1.6;
+    }
+    #captured-tiles {
+      background: var(--dark);
+      border: 2px solid rgba(240,60,151,0.2);
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-height: 50px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+    }
+    #captured-tiles.empty::before {
+      content: 'None yet';
+      font-size: 0.72rem;
+      color: rgba(240,60,151,0.35);
+      font-style: italic;
+    }
+    .cap-cone {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 36% 32%,
+        rgba(255,190,220,0.85) 0%,
+        #F03C97 30%,
+        #901860 70%,
+        #4a0a28 100%);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.12);
+      clip-path: none;
+      filter: none;
+      flex-shrink: 0;
+    }
+    @keyframes cone-drop {
+      0%   { transform: translateY(-12px) scale(0.4); opacity: 0; }
+      65%  { transform: translateY(2px) scale(1.06); }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .cap-cone.new { animation: cone-drop 0.26s cubic-bezier(0.22,1,0.36,1); }
+
+    /* ── STATS ROW ──────────────────────────────── */
+    #stats-row {
+      display: flex;
+      gap: 8px;
+    }
+    .stat-box {
+      flex: 1;
+      background: var(--dark);
+      border: 2px solid rgba(240,60,151,0.18);
+      border-radius: 12px;
+      padding: 10px 10px 9px;
+    }
+    .stat-label {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.55rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      margin-bottom: 2px;
+    }
+    .stat-value {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+    .stat-box.timer  .stat-label { color: var(--yellow); }
+    .stat-box.timer  .stat-value { color: var(--yellow); }
+    .stat-box.pegs   .stat-label { color: var(--pink); }
+    .stat-box.pegs   .stat-value { color: var(--pink); }
+    .stat-box.score  .stat-label { color: var(--yellow); }
+    .stat-box.score  .stat-value { color: var(--yellow); }
+
+    /* ── STATUS TEXT ────────────────────────────── */
+    #status {
+      font-size: 0.82rem;
+      color: rgba(240,60,151,0.6);
+      text-align: center;
+      min-height: 18px;
+      font-weight: 500;
+      line-height: 1.4;
+      margin-top: 10px;
+    }
+
+    /* ── CONTROLS ───────────────────────────────── */
+    .controls {
+      display: flex;
+      gap: 10px;
+    }
+    .ctrl-btn {
+      flex: 1;
+      padding: 14px 16px;
+      border: none;
+      border-radius: 50px;
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      min-height: 50px;
+      text-transform: uppercase;
+    }
+    .ctrl-btn.primary {
+      background: var(--yellow);
+      color: var(--bg);
+    }
+    .ctrl-btn.secondary {
+      background: transparent;
+      color: var(--pink);
+      border: 2px solid var(--pink);
+    }
+    .ctrl-btn:active { opacity: 0.75; transform: scale(0.97); }
+    .ctrl-btn:disabled { opacity: 0.2; pointer-events: none; }
+
+    /* ── RESULT OVERLAY ─────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(50,5,28,0.75);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 300;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    @keyframes sheet-up {
+      0%   { transform: translateY(100%); }
+      100% { transform: translateY(0); }
+    }
+    .result-card {
+      background: var(--darker);
+      border-top: 3px solid var(--pink);
+      border-radius: 28px 28px 0 0;
+      padding: 24px 28px 52px;
+      text-align: center;
+      width: 100%;
+      max-width: 480px;
+      animation: sheet-up 0.38s cubic-bezier(0.22,1,0.36,1);
+    }
+    .result-handle {
+      width: 36px;
+      height: 4px;
+      background: rgba(240,60,151,0.35);
+      border-radius: 2px;
+      margin: 0 auto 22px;
+    }
+    .result-emoji { font-size: 2.8rem; margin-bottom: 10px; }
+    .result-title {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: clamp(2rem, 10vw, 3rem);
+      color: var(--pink);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 0.95;
+      margin-bottom: 8px;
+    }
+    .result-desc {
+      font-size: 0.84rem;
+      color: rgba(240,60,151,0.6);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .result-stats {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .result-stat {
+      flex: 1;
+      background: var(--dark);
+      border: 2px solid rgba(240,60,151,0.2);
+      border-radius: 12px;
+      padding: 10px 6px;
+    }
+    .result-stat-label {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.55rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--yellow);
+      margin-bottom: 3px;
+    }
+    .result-stat-value {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 1.4rem;
+      color: var(--white);
+      line-height: 1;
+    }
+    #result-cones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+      margin-bottom: 22px;
+      min-height: 16px;
+    }
+    .rc-cone {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 36% 32%,
+        rgba(255,190,220,0.85) 0%,
+        #F03C97 30%,
+        #901860 70%,
+        #4a0a28 100%);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.45);
+    }
+    .result-card .ctrl-btn.primary {
+      width: 100%;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 1rem;
+    }
+
+    /* ── SUBMIT SECTION ─────────────────────────── */
+    .submit-label {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.68rem;
+      color: rgba(240,60,151,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      margin-bottom: 12px;
+      margin-top: 20px;
+    }
+    .name-input {
+      width: 100%;
+      background: var(--dark);
+      border: 2px solid rgba(240,60,151,0.3);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 1rem;
+      color: var(--white);
+      outline: none;
+      margin-bottom: 12px;
+      text-align: center;
+      letter-spacing: 0.04em;
+      -webkit-appearance: none;
+      display: block;
+    }
+    .name-input::placeholder { color: rgba(240,60,151,0.28); font-weight: 400; font-family: system-ui; }
+    .name-input:focus { border-color: var(--pink); }
+    .submit-btn {
+      width: 100%;
+      background: var(--pink);
+      color: var(--white);
+      border: none;
+      border-radius: 14px;
+      padding: 15px;
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      min-height: 50px;
+    }
+    .submit-btn:active   { opacity: 0.75; transform: scale(0.97); }
+    .submit-btn:disabled { opacity: 0.35; pointer-events: none; }
+    .submit-saved {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 1rem;
+      color: var(--yellow);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .result-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .result-actions .ctrl-btn {
+      border-radius: 14px;
+      padding: 15px 10px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="title">The Last Peg</div>
+    <div class="subtitle">Leave just one.</div>
+    <div id="status">Tap any hole to start game</div>
+  </div>
+
+  <div class="game-wrap">
+
+    <div id="board-wrap">
+      <div id="board-container"></div>
+    </div>
+
+    <div>
+      <div class="section-label">
+        Pegs cleared
+        <span class="count-pill" id="captured-count">0</span>
+      </div>
+      <div id="captured-tiles" class="empty"></div>
+    </div>
+
+    <div id="stats-row">
+      <div class="stat-box timer">
+        <div class="stat-label">⏱ Time</div>
+        <div class="stat-value" id="timer-value">0:00</div>
+      </div>
+      <div class="stat-box pegs">
+        <div class="stat-label">Pegs left</div>
+        <div class="stat-value" id="pegs-value">14</div>
+      </div>
+      <div class="stat-box score">
+        <div class="stat-label">Score</div>
+        <div class="stat-value" id="score-value">—</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl-btn secondary" id="undo-btn" disabled>↩ Undo</button>
+      <button class="ctrl-btn primary"   id="new-btn">↺ New Game</button>
+    </div>
+
+  </div>
+
+  <!-- Result bottom sheet -->
+  <div class="overlay" id="result-overlay" style="display:none">
+    <div class="result-card">
+      <div class="result-handle"></div>
+      <div class="result-emoji" id="result-emoji"></div>
+      <div class="result-title"  id="result-title"></div>
+      <div class="result-desc"   id="result-desc"></div>
+      <div class="result-stats">
+        <div class="result-stat">
+          <div class="result-stat-label">Score</div>
+          <div class="result-stat-value" id="result-score"></div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-label">Time</div>
+          <div class="result-stat-value" id="result-time"></div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-label">Pegs left</div>
+          <div class="result-stat-value" id="result-pegs"></div>
+        </div>
+      </div>
+      <div id="result-cones"></div>
+
+      <!-- Submit + actions -->
+      <div id="submit-step">
+        <div class="submit-label">Save your score to the leaderboard</div>
+        <input type="text" class="name-input" id="submit-name" placeholder="Your name" maxlength="30" autocomplete="off" autocorrect="off" spellcheck="false">
+        <button class="submit-btn" id="submit-btn">Save Score</button>
+      </div>
+      <div id="after-submit" style="display:none">
+        <div class="submit-saved">Score saved! 🎉</div>
+        <div class="result-actions">
+          <button class="ctrl-btn secondary" id="leaderboard-btn">🏆 Leaderboard</button>
+          <button class="ctrl-btn primary"   id="play-again-btn">↺ Play Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────
+// Paste your Google Apps Script Web App URL here after deploying:
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyO0sccMsabS4D0ksDBT_GiCi7fPMC8Lb5N_6pPf9zyA5y5bNe-pxkRhoNU4USAQjJW/exec';
+const SECRET_KEY = 'lastpeg2024';
+
+// ── BOARD GEOMETRY ─────────────────────────────────────
+const ROWS      = 5;
+const HOLE_SIZE = 46;
+const SPACING   = 54;
+const V_SPACING = 47;
+const BOARD_W   = (ROWS - 1) * SPACING + HOLE_SIZE;
+const BOARD_H   = (ROWS - 1) * V_SPACING + HOLE_SIZE;
+
+const DIRS = [
+  [ 0,-1],[ 0, 1],
+  [-1,-1],[-1, 0],
+  [ 1, 0],[ 1, 1],
+];
+
+// ── HELPERS ────────────────────────────────────────────
+function posToIdx(r, c) {
+  if (r < 0 || r >= ROWS || c < 0 || c > r) return -1;
+  return r * (r + 1) / 2 + c;
+}
+function idxToRC(i) {
+  const r = Math.floor((-1 + Math.sqrt(1 + 8 * i)) / 2);
+  return [r, i - r * (r + 1) / 2];
+}
+function holePos(r, c) {
+  const cx = BOARD_W / 2;
+  return {
+    x: cx + (c - r / 2) * SPACING - HOLE_SIZE / 2,
+    y: r * V_SPACING,
+  };
+}
+
+// ── STATE ──────────────────────────────────────────────
+let board    = new Array(15).fill(false);
+let captured = 0;
+let history  = [];
+let selected = null;
+let phase    = 'setup';
+let lastScore     = 0;
+let lastPegsLeft  = 0;
+
+let timerStart   = null;
+let timerElapsed = 0;
+let timerHandle  = null;
+
+// ── MOVE LOGIC ─────────────────────────────────────────
+function validTargets(fromIdx) {
+  const [r, c] = idxToRC(fromIdx);
+  return DIRS.reduce((acc, [dr, dc]) => {
+    const mid = posToIdx(r + dr,   c + dc);
+    const to  = posToIdx(r + 2*dr, c + 2*dc);
+    if (mid >= 0 && to >= 0 && board[mid] && !board[to]) acc.push(to);
+    return acc;
+  }, []);
+}
+function midIdx(from, to) {
+  const [fr, fc] = idxToRC(from);
+  const [tr, tc] = idxToRC(to);
+  return posToIdx((fr + tr) / 2, (fc + tc) / 2);
+}
+function hasAnyMoves() {
+  return board.some((p, i) => p && validTargets(i).length > 0);
+}
+function pegsLeft() { return board.filter(Boolean).length; }
+
+// ── SCORING ────────────────────────────────────────────
+function calcScore(pegsRemaining, secs) {
+  const elim = 14 - pegsRemaining;
+  if (elim === 0) return 0;
+  return Math.round((elim / 13) * 5000 * (120 / Math.max(secs, 30)));
+}
+
+// ── TIMER ──────────────────────────────────────────────
+function startTimer() {
+  if (timerStart !== null) return;
+  timerStart = Date.now();
+  timerHandle = setInterval(tickTimer, 500);
+}
+function tickTimer() {
+  timerElapsed = Math.floor((Date.now() - timerStart) / 1000);
+  const m = Math.floor(timerElapsed / 60);
+  const s = timerElapsed % 60;
+  document.getElementById('timer-value').textContent = `${m}:${String(s).padStart(2,'0')}`;
+  document.getElementById('score-value').textContent =
+    calcScore(pegsLeft(), timerElapsed).toLocaleString();
+}
+function stopTimer() {
+  if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+  timerElapsed = timerStart ? Math.floor((Date.now() - timerStart) / 1000) : 0;
+}
+function resetTimer() {
+  stopTimer();
+  timerStart = null;
+  timerElapsed = 0;
+  document.getElementById('timer-value').textContent = '0:00';
+  document.getElementById('score-value').textContent = '—';
+}
+
+// ── ACTIONS ────────────────────────────────────────────
+function startGame(emptyIdx) {
+  board    = new Array(15).fill(true);
+  board[emptyIdx] = false;
+  captured = 0;
+  history  = [];
+  selected = null;
+  phase    = 'play';
+  resetTimer();
+  render();
+  updateHUD();
+}
+
+function selectPeg(idx) {
+  if (!board[idx]) return;
+  if (selected === idx) { selected = null; }
+  else {
+    selected = idx;
+    if (validTargets(idx).length === 0) {
+      const el = document.querySelector(`[data-idx="${idx}"]`);
+      if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+    }
+  }
+  render();
+  updateHUD();
+}
+
+function doJump(from, to) {
+  const mid = midIdx(from, to);
+  if (mid < 0) return;
+  startTimer();
+  history.push({ board: [...board], captured });
+  board[mid]  = false;
+  board[to]   = true;
+  board[from] = false;
+  captured++;
+  selected = null;
+  render();
+  updateHUD();
+  const strip = document.getElementById('captured-tiles');
+  const cones = strip.querySelectorAll('.cap-cone');
+  const last  = cones[cones.length - 1];
+  if (last) last.classList.add('new');
+  setTimeout(() => {
+    const n = pegsLeft();
+    if (n === 1 || !hasAnyMoves()) { stopTimer(); showResult(n); }
+  }, 250);
+}
+
+function undo() {
+  if (!history.length) return;
+  const prev = history.pop();
+  board    = prev.board;
+  captured = prev.captured;
+  selected = null;
+  if (history.length === 0) resetTimer();
+  render();
+  updateHUD();
+}
+
+function resetGame() {
+  board    = new Array(15).fill(false);
+  captured = 0;
+  history  = [];
+  selected = null;
+  phase    = 'setup';
+  resetTimer();
+  document.getElementById('result-overlay').style.display = 'none';
+  render();
+  updateHUD();
+}
+
+// ── RENDER ─────────────────────────────────────────────
+function render() {
+  const container = document.getElementById('board-container');
+  container.innerHTML = '';
+  container.style.width  = BOARD_W + 'px';
+  container.style.height = BOARD_H + 'px';
+
+  const targets = (phase === 'play' && selected !== null) ? validTargets(selected) : [];
+
+  for (let i = 0; i < 15; i++) {
+    const [r, c] = idxToRC(i);
+    const { x, y } = holePos(r, c);
+    const hole = document.createElement('div');
+    hole.dataset.idx = i;
+    hole.style.left = x + 'px';
+    hole.style.top  = y + 'px';
+
+    if (phase === 'setup') {
+      hole.className = 'hole';
+      hole.addEventListener('click',        () => startGame(i));
+      hole.addEventListener('pointerenter', () => hole.classList.add('setup-hi'));
+      hole.addEventListener('pointerleave', () => hole.classList.remove('setup-hi'));
+    } else if (board[i]) {
+      hole.className = 'hole';
+      const cone = document.createElement('div');
+      cone.className = 'peg-cone' + (i === selected ? ' selected' : '');
+      hole.appendChild(cone);
+      hole.addEventListener('click', () => selectPeg(i));
+    } else if (targets.includes(i)) {
+      hole.className = 'hole valid-target';
+      hole.addEventListener('click', () => doJump(selected, i));
+    } else {
+      hole.className = 'hole';
+      hole.addEventListener('click', () => { selected = null; render(); updateHUD(); });
+    }
+
+    container.appendChild(hole);
+  }
+
+  // Captured strip
+  const strip = document.getElementById('captured-tiles');
+  const badge = document.getElementById('captured-count');
+  badge.textContent = captured;
+  strip.innerHTML   = '';
+  if (captured === 0) {
+    strip.classList.add('empty');
+  } else {
+    strip.classList.remove('empty');
+    for (let k = 0; k < captured; k++) {
+      const c = document.createElement('div');
+      c.className = 'cap-cone';
+      strip.appendChild(c);
+    }
+  }
+
+  document.getElementById('undo-btn').disabled = history.length === 0;
+  document.getElementById('pegs-value').textContent = phase === 'setup' ? '14' : pegsLeft();
+  document.querySelector('.controls').style.visibility = phase === 'setup' ? 'hidden' : 'visible';
+}
+
+function updateHUD() {
+  const el = document.getElementById('status');
+  if (phase === 'setup') {
+    el.textContent = 'Tap any hole to start game';
+    return;
+  }
+  const n = pegsLeft();
+  if (selected !== null) {
+    const moves = validTargets(selected);
+    el.textContent = moves.length
+      ? `${moves.length} jump${moves.length > 1 ? 's' : ''} available — tap a glowing hole`
+      : 'No jumps here — pick a different cone';
+  } else if (history.length === 0) {
+    el.textContent = 'Tap a cone to select it';
+  } else {
+    el.textContent = `${n} cone${n !== 1 ? 's' : ''} remaining — keep jumping!`;
+  }
+}
+
+// ── RESULT COPY ────────────────────────────────────────
+const RATINGS = [
+  {
+    max: 1, emoji: '🏆',
+    titles: ['Peg-endary','Peg Near Perfect','One Peg Wonder','Pegcellent','Certified Pegthlete'],
+    desc: 'You left just one. Absolute perfection.',
+  },
+  {
+    max: 2, emoji: '😎',
+    titles: ['Pegtty Good','Peg Above Average','Pegging Momentum','Solid Peg-formance'],
+    desc: 'Two pegs left. Sharp and impressive.',
+  },
+  {
+    max: 3, emoji: '🤔',
+    titles: ['Peg Happens','Pegs Gone Wild','Pegged and Confused'],
+    desc: 'Three pegs left. So close — one more try?',
+  },
+  {
+    max: 4, emoji: '😅',
+    titles: ['Pegastrophic'],
+    desc: 'Four pegs left. Lovable effort though.',
+  },
+  {
+    max: 99, emoji: '🫠',
+    titles: ['Un-pegging-believable','Mission Unpeggable','Pegsorcism Required'],
+    desc: n => `${n} pegs left. Shake it off and go again.`,
+  },
+];
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function showResult(n) {
+  const r     = RATINGS.find(x => n <= x.max);
+  const secs  = timerElapsed || 0;
+  const score = calcScore(n, secs);
+  const m     = Math.floor(secs / 60);
+  const s     = secs % 60;
+
+  document.getElementById('result-emoji').textContent = r.emoji;
+  document.getElementById('result-title').textContent = pick(r.titles);
+  document.getElementById('result-desc').textContent  =
+    typeof r.desc === 'function' ? r.desc(n) : r.desc;
+  document.getElementById('result-score').textContent = score.toLocaleString();
+  document.getElementById('result-time').textContent  = `${m}:${String(s).padStart(2,'0')}`;
+  document.getElementById('result-pegs').textContent  = n;
+
+  const rc = document.getElementById('result-cones');
+  rc.innerHTML = '';
+  for (let k = 0; k < captured; k++) {
+    const c = document.createElement('div');
+    c.className = 'rc-cone';
+    rc.appendChild(c);
+  }
+
+  lastScore    = score;
+  lastPegsLeft = n;
+
+  // Reset submit flow
+  document.getElementById('submit-name').value  = '';
+  document.getElementById('submit-step').style.display  = 'block';
+  document.getElementById('after-submit').style.display = 'none';
+  const sb = document.getElementById('submit-btn');
+  sb.textContent = 'Save Score';
+  sb.disabled    = false;
+
+  document.getElementById('result-overlay').style.display = 'flex';
+}
+
+// ── SUBMIT SCORE ───────────────────────────────────────
+async function submitScore() {
+  const nameEl = document.getElementById('submit-name');
+  const name   = nameEl.value.trim();
+  if (!name) { nameEl.style.borderColor = 'var(--pink)'; nameEl.focus(); return; }
+  nameEl.style.borderColor = '';
+
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = 'Saving…';
+  btn.disabled    = true;
+
+  const d      = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const date   = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+
+  let saved = false;
+  try {
+    await fetch(SCRIPT_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
+      body:     JSON.stringify({ name, score: lastScore, date, key: SECRET_KEY }),
+    });
+    saved = true;
+  } catch (err) { /* show buttons anyway */ }
+
+  document.getElementById('submit-step').style.display  = 'none';
+  document.getElementById('after-submit').style.display = 'block';
+  document.getElementById('submit-saved').textContent   = saved ? 'Score saved! 🎉' : 'Score not saved — but good game! 👾';
+}
+
+// ── INIT ───────────────────────────────────────────────
+document.getElementById('undo-btn').addEventListener('click', undo);
+document.getElementById('new-btn').addEventListener('click', resetGame);
+document.getElementById('play-again-btn').addEventListener('click', resetGame);
+document.getElementById('leaderboard-btn').addEventListener('click', () => { window.location.href = 'leaderboard.html'; });
+document.getElementById('submit-btn').addEventListener('click', submitScore);
+resetGame();
+</script>
+</body>
+</html>
