@@ -496,6 +496,116 @@
       padding: 15px 10px;
       font-size: 0.9rem;
     }
+
+    /* ── HOW TO PLAY LINK ───────────────────────── */
+    .how-to-play-link {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: rgba(240,60,151,0.5);
+      text-decoration: none;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid rgba(240,60,151,0.2);
+      transition: color 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .how-to-play-link:hover { color: var(--pink); border-color: rgba(240,60,151,0.5); }
+
+    /* ── HOW TO PLAY MODAL ──────────────────────── */
+    #htp-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(50,5,28,0.75);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 400;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .htp-card {
+      background: var(--darker);
+      border-top: 3px solid var(--pink);
+      border-radius: 28px 28px 0 0;
+      padding: 24px 28px 52px;
+      width: 100%;
+      max-width: 480px;
+      animation: sheet-up 0.35s cubic-bezier(0.22,1,0.36,1);
+    }
+    .htp-handle {
+      width: 36px; height: 4px;
+      background: rgba(240,60,151,0.35);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+    .htp-title {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 1.5rem;
+      color: var(--pink);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .htp-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .htp-step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .htp-num {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.7rem;
+      background: var(--pink);
+      color: var(--darker);
+      border-radius: 50%;
+      min-width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .htp-text {
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.5;
+    }
+    .htp-text strong { color: var(--yellow); font-weight: 600; }
+    .htp-tip {
+      background: rgba(212,242,10,0.06);
+      border: 1px solid rgba(212,242,10,0.2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.8rem;
+      color: rgba(212,242,10,0.7);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .htp-close {
+      width: 100%;
+      background: var(--pink);
+      color: var(--white);
+      border: none;
+      border-radius: 14px;
+      padding: 15px;
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .htp-close:active { opacity: 0.75; }
   </style>
 </head>
 <body>
@@ -504,6 +614,7 @@
     <div class="title">The Last Peg</div>
     <div class="subtitle">Leave just one.</div>
     <div id="status">Tap any hole to start game</div>
+    <span class="how-to-play-link" id="htp-btn">How to play?</span>
   </div>
 
   <div class="game-wrap">
@@ -540,6 +651,38 @@
       <button class="ctrl-btn primary"   id="new-btn">↺ New Game</button>
     </div>
 
+  </div>
+
+  <!-- How to play bottom sheet -->
+  <div id="htp-overlay" style="display:none">
+    <div class="htp-card">
+      <div class="htp-handle"></div>
+      <div class="htp-title">How to Play</div>
+      <div class="htp-steps">
+        <div class="htp-step">
+          <div class="htp-num">1</div>
+          <div class="htp-text"><strong>Pick your starting hole.</strong> Tap any hole on the board — that hole stays empty. The rest fill with pegs (14 total).</div>
+        </div>
+        <div class="htp-step">
+          <div class="htp-num">2</div>
+          <div class="htp-text"><strong>Select a peg.</strong> Tap a pink peg to select it — it'll glow yellow.</div>
+        </div>
+        <div class="htp-step">
+          <div class="htp-num">3</div>
+          <div class="htp-text"><strong>Jump!</strong> Tap a highlighted empty hole to jump over an adjacent peg into it. The peg you jumped over is removed.</div>
+        </div>
+        <div class="htp-step">
+          <div class="htp-num">4</div>
+          <div class="htp-text"><strong>Keep going</strong> until no more moves are possible. Game over when no peg can jump another.</div>
+        </div>
+        <div class="htp-step">
+          <div class="htp-num">5</div>
+          <div class="htp-text"><strong>Win condition:</strong> Leave exactly <strong>1 peg</strong> on the board. The fewer pegs left, the better your score!</div>
+        </div>
+      </div>
+      <div class="htp-tip">🏆 Leaderboard ranks by <strong style="color:var(--yellow)">fewest pegs left</strong>, then <strong style="color:var(--yellow)">fastest time</strong> as a tiebreaker.</div>
+      <button class="htp-close" id="htp-close">Got it!</button>
+    </div>
   </div>
 
   <!-- Result bottom sheet -->
@@ -937,6 +1080,19 @@ async function submitScore() {
   document.getElementById('after-submit').style.display = 'block';
   document.getElementById('submit-saved').textContent   = saved ? 'Score saved! 🎉' : 'Score not saved — but good game! 👾';
 }
+
+// ── HOW TO PLAY ────────────────────────────────────────
+function openHtp() {
+  document.getElementById('htp-overlay').style.display = 'flex';
+}
+function closeHtp() {
+  document.getElementById('htp-overlay').style.display = 'none';
+}
+document.getElementById('htp-btn').addEventListener('click', openHtp);
+document.getElementById('htp-close').addEventListener('click', closeHtp);
+document.getElementById('htp-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeHtp();
+});
 
 // ── INIT ───────────────────────────────────────────────
 document.getElementById('undo-btn').addEventListener('click', undo);
